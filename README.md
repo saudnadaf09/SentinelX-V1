@@ -1,114 +1,813 @@
-# SentinelX - AI-Powered SIEM & XDR-lite
+# ◈ SentinelX V1
+### SIEM & XDR-Lite | Security Operations Monitoring Platform
 
-Built by **Saud Nadaf**, 2nd-year B.Tech CSE (Cybersecurity) student at Darbhanga College of Engineering (DCE).
-[LinkedIn](https://www.linkedin.com/in/saud-nadaf-41b015343/) · [GitHub](https://github.com/saudnadaf09) · saudnadaf.infosec@proton.me
+<p align="center">
+  <strong>Centralized Security Visibility • Threat Detection • Incident Management • Security Investigation</strong>
+</p>
 
-**License: proprietary, all rights reserved** (see `LICENSE`). Viewing for evaluation is allowed; copying, modifying, redistributing or hosting is not.
+<p align="center">
+  <a href="https://sentinelx-2ej8.onrender.com/">Live Demo</a> •
+  <a href="https://github.com/saudnadaf09/SentinelX-V1">GitHub Repository</a>
+</p>
 
-A single-developer, lab-scale security monitoring platform: collect endpoint/network telemetry, normalize it,
-detect with deterministic YAML rules, correlate related alerts into explainable incidents, map to MITRE ATT&CK,
-investigate with an optional AI assistant, and run approval-gated, mock-by-default response actions.
+---
 
-> **Honest scope.** This is a portfolio/lab project, not a commercial SIEM/XDR. Response actions are simulated.
-> AI is advisory and optional. Read [Implementation status](#implementation-status) before presenting anything as "working".
+## 1. Project Overview
 
-## Features
-Authentication + 4-role RBAC (server-side) · collector API keys (hashed, expiring, revocable) · batch ingestion with
-validation, idempotency and dead-lettering · ECS-style normalization (Sysmon, Windows Security, Linux auth, Suricata) ·
-OpenSearch event search · 12 YAML detection rules (match / threshold / distinct-count / sequence) · explainable
-correlation · ATT&CK mapping · alerts + incidents + notes + timeline · AI investigator with rule-based fallback ·
-response proposals with dry-run, separation-of-duties approval, expiry, rollback · audit log · incident reports
-(MD/HTML/JSON) and CSV exports · React SOC console (16 pages).
+**SentinelX** is a Security Information and Event Management (SIEM) and XDR-lite platform developed to provide centralized visibility into security events and support essential Security Operations Center (SOC) workflows.
 
-## Architecture
-```
-collector/replay -> POST /api/v1/ingest/events/batch (FastAPI: auth, validation, size/rate limits)
-   -> Redis Streams -> worker: normalize -> dedupe -> detect -> alerts+correlation (PostgreSQL) -> index (OpenSearch)
-React console (Nginx) <-> FastAPI REST  <->  PostgreSQL (state, audit)  +  OpenSearch (events)
-```
-Details, data model and every deviation from the blueprint: [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+The platform brings together security event management, rule-based threat detection, alert monitoring, incident tracking, asset visibility, audit logs, reporting, and AI-assisted investigation interfaces in a unified security operations dashboard.
 
-## Quick start - Easy Mode (no Docker)
-Install Python 3.10+ and Node.js LTS, then double-click **`run.bat`** (Linux/macOS: `./run.sh`). It installs
-dependencies, builds the UI, creates the database, admin + demo users, loads demo attack data and opens
-http://localhost:8000. Logins are written to `DEMO-LOGINS.txt`. See **START-HERE.txt**.
-Easy Mode uses one process with SQLite (database + persistent event store) and an in-memory queue; it is meant for
-a single machine. The Docker stack below (PostgreSQL, Redis, OpenSearch) is the production-like option.
+SentinelX is designed with a modular backend and frontend architecture, allowing its security monitoring and investigation capabilities to be extended as the project evolves.
 
-## Quick start (Docker)
-```bash
-./start.sh            # Linux/macOS      (Windows: start.bat)
-./scripts/demo.sh     # seed demo users + replay the synthetic attack  (Windows: scripts\demo.bat)
-```
-Open **http://localhost:8080** (API docs: http://localhost:8080/api/docs). Full steps: [SETUP.md](SETUP.md).
-Problems: [TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+The objective is to simplify security operations by bringing important monitoring and investigation workflows into one centralized workspace.
 
-## Technology stack
-Python 3.12 · FastAPI · Pydantic v2 · SQLAlchemy 2 · Alembic · PostgreSQL 16 · Redis 7 Streams · OpenSearch 2.17 ·
-React 18 + TypeScript + Vite + Tailwind · Docker Compose · Nginx. Versions are pinned in
-`backend/requirements.txt`, `frontend/package.json` and `docker-compose.yml`.
+### Project Information
 
-## Screenshots
-Placeholders - capture after your first run: `docs/screenshots/overview.png`, `alerts.png`, `incident-timeline.png`.
-
-## Sample event replay
-`docker compose exec backend python -m app.cli replay-sample` ingests 47 synthetic events (RFC 5737 IPs, fictional
-hosts) that trigger all 12 rules: SSH/Windows brute force, success-after-failures, encoded PowerShell (plus an
-excluded benign automation run), script interpreter, temp-path execution, service-stop, scheduled task, new
-privileged account, outbound C2-style connection and a port scan. A static copy is in `sample-data/sample_events.jsonl`.
-
-## Testing
-```bash
-cd backend && pip install -r requirements-dev.txt && pytest          # API + domain tests, no Docker needed
-python -m unittest discover -s tests -p "test_domain_*.py"           # domain tests only, stdlib only
-cd ../frontend && npm install && npm run typecheck && npm run build
-```
-
-## Security notes
-Argon2id passwords · short-lived JWT access tokens + rotating refresh tokens · deny-by-default RBAC on every route ·
-HMAC-hashed collector keys shown once · request-size and rate limits · strict input schemas, field allowlists for
-search · no shell execution anywhere · AI sees redacted, bounded evidence and cannot act · append-only audit (DB
-trigger on PostgreSQL) · secrets only via environment. Known weaknesses are listed below - read them.
-
-## Implementation status
-Legend: **T** = covered by tests that were actually executed in the build environment; **W** = written and
-statically checked only (syntax/import resolution) but **not executed** because the build sandbox had no network,
-Docker, or Python web/ORM packages. Run the test suite on your machine to promote W items to verified.
-
-| Module | Status |
+| Attribute | Details |
 |---|---|
-| Event normalization (Sysmon, Win Security, Linux auth, Suricata) | **T** (47 domain tests) |
-| Detection engine, 12 rules, thresholds, sequence, exclusions, idempotency | **T** |
-| Correlation logic and reasons | **T** |
-| MITRE mapping table (rules reference only known techniques) | **T** |
-| Query validation, in-memory store/queue (dedupe, retry, dead-letter), SQLite event store | **T** |
-| Redaction, AI output validation, deterministic AI fallback | **T** |
-| Response action allowlist + mock adapter | **T** |
-| FastAPI app, auth/JWT/Argon2, RBAC, all REST routes | **W** (pytest suite written, not run) |
-| SQLAlchemy models, Alembic baseline migration, PostgreSQL audit trigger | **W** |
-| Redis Streams queue, OpenSearch store/mappings/retention | **W** |
-| Worker pipeline, alert upsert, auto-incident correlation | **W** |
-| Response approval workflow (service + API) | **W** |
-| LLM providers (Anthropic / OpenAI-compatible) | **W** (never called) |
-| Reports and CSV export | **W** |
-| React console (16 pages) | **W** (TSX syntax-checked; `vite build` not run) |
-| Docker Compose, Nginx, start scripts | **W** |
-| Easy Mode launcher (`run.bat`/`run.sh`, `easy_start.py`, UI served by the API) | **W** (never run end-to-end) |
-| Playwright UI tests | Planned - not included |
-| Real Sysmon/auditd/Fluent Bit collectors | Planned - see docs/INGESTION.md |
-| Real (non-mock) response adapters | Not implemented, by design |
-| Performance numbers (50 events/s, <5 s latency) | **Not measured** - targets only |
+| Project Name | SentinelX |
+| Version | V1 |
+| Category | Cybersecurity / SIEM / XDR-Lite |
+| Platform | Web-based Security Operations Dashboard |
+| Backend | Python |
+| Frontend | React + TypeScript |
+| API | REST API |
+| Detection Engine | Rule-based Detection |
+| Deployment | Render |
+| Development | Windows / Local Environment |
+| Repository | GitHub |
 
-## Known limitations
-- Rule engine window state is in memory; a worker restart forgets partially built thresholds.
-- Single worker assumed; engine state is not shared across workers.
-- Rate limiting is per-process. Tokens live in `sessionStorage` (XSS would expose them); CSP is set in Nginx.
-- `package-lock.json` is not shipped (no network at build time); `npm install` creates it. Commit it afterwards.
-- Baseline migration uses `create_all`; generate explicit migrations for future schema changes.
-- OpenSearch runs with its security plugin disabled for the lab and is never published to the host.
-- ATT&CK data is a curated subset; verify names/tactics against the current release.
-- Alert list filtering by technique is done in Python (fine at lab scale, not for millions of alerts).
+---
 
-## Roadmap
-Playwright E2E, real collectors (Fluent Bit configs), Sigma import subset, rule test UI, stateful rule recovery from
-OpenSearch, MFA/SSO, explainable risk scoring, lab firewall response adapter, load-test harness with published numbers.
+## 2. Live Demo
+
+<https://sentinelx-2ej8.onrender.com/>
+
+**Explore the deployed SentinelX V1 application.**
+
+The live application is hosted on Render. Availability and performance depend on the hosting plan and service status.
+
+**Note:** The current free Render deployment uses an ephemeral filesystem. Data stored locally on the instance may not persist across restarts or redeployments. Do not use this deployment as a production SOC environment or upload sensitive organizational telemetry.
+
+---
+
+## 3. Core Objectives
+
+SentinelX aims to provide a centralized environment for:
+
+- Monitoring security-related events.
+- Organizing and analyzing incoming event data.
+- Identifying suspicious activity through detection rules.
+- Managing security alerts.
+- Tracking security incidents.
+- Maintaining asset visibility.
+- Supporting security investigations.
+- Reviewing audit activity.
+- Organizing security operations through a unified dashboard.
+
+The project focuses on practical SOC workflows and provides a foundation for further development toward a more scalable security monitoring platform.
+
+---
+
+## 4. Key Features and Modules
+
+### 4.1 Security Operations Dashboard
+
+The Overview dashboard provides a centralized view of security operations.
+
+Key areas include:
+
+- Security event overview.
+- Alert visibility.
+- Incident overview.
+- Asset information.
+- Security activity monitoring.
+- Centralized navigation to investigation modules.
+
+The dashboard is designed to provide analysts with a single starting point for reviewing security activity.
+
+### 4.2 Event Management
+
+The Events module provides an interface for exploring security event information.
+
+Related backend components include:
+
+- Event API.
+- Event ingestion API.
+- Event serialization.
+- Event normalization.
+- Event processing services.
+
+The ingestion and processing architecture provides the foundation for handling structured security event data.
+
+### 4.3 Threat Detection Engine
+
+SentinelX includes a rule-based detection architecture.
+
+Detection rules are maintained in YAML files and organized by security category.
+
+Detection rule categories include:
+
+| Category | Examples |
+|---|---|
+| Authentication | New account, privileged group activity, brute-force patterns |
+| Network | Port scanning, suspicious outbound activity |
+| Process | Suspicious PowerShell, script interpreters, temporary-path execution |
+| Persistence | Scheduled task and service-related activity |
+| Correlation | Related event correlation |
+
+Detection rules are stored in:
+
+`detection-rules/`
+
+The detection engine includes rule loading, rule evaluation, normalization, and correlation components.
+
+Detection outcomes depend on the event data supplied to the application and the active processing configuration.
+
+### 4.4 Alert Management
+
+The Alerts module provides a centralized interface for reviewing security alerts.
+
+It includes:
+
+- Alert listing.
+- Alert detail views.
+- Alert investigation workflows.
+- Alert-related backend services.
+- Alert API endpoints.
+
+The module supports the security alert review process within the SOC dashboard.
+
+### 4.5 Incident Management
+
+The Incidents module provides a dedicated workspace for security incident tracking.
+
+It includes:
+
+- Incident listing.
+- Incident detail views.
+- Incident-related API endpoints.
+- Incident management services.
+- Incident investigation interface.
+
+This module provides a structured workflow for reviewing and managing security incidents.
+
+### 4.6 Asset Management
+
+The Assets module provides an interface for viewing and managing security-related asset information.
+
+It includes:
+
+- Asset dashboard.
+- Asset API.
+- Asset-related data models.
+- Asset management interface.
+
+Asset visibility is an important part of centralized security operations.
+
+### 4.7 AI Investigator
+
+The AI Investigator module provides an interface for AI-assisted security investigation.
+
+Related components include:
+
+- AI API endpoints.
+- AI service layer.
+- AI analysis domain logic.
+- Investigation interface.
+
+The actual availability of AI analysis depends on the configured provider, API credentials, and supported implementation.
+
+AI-generated results should be reviewed against the underlying security evidence.
+
+### 4.8 MITRE ATT&CK Integration Components
+
+SentinelX includes MITRE-related backend components and a dedicated MITRE interface.
+
+These components provide a foundation for organizing threat-related information and mapping detection activity to relevant techniques where supported by the implementation.
+
+### 4.9 Threat Hunting
+
+The project includes a dedicated Threat Hunting interface for security investigation workflows.
+
+It provides a starting point for reviewing security activity and investigating potentially suspicious behavior.
+
+### 4.10 Response Center
+
+The Response Center provides a centralized interface for response-related security operations.
+
+Related components include:
+
+- Response API.
+- Response service.
+- Response action domain logic.
+- Response management interface.
+
+**Important:** The availability of a response interface does not automatically mean that a real endpoint has been isolated, a process terminated, or a firewall rule applied. Actual execution requires a supported integration and verification.
+
+### 4.11 Audit Logs
+
+The Audit Logs module provides an interface for reviewing security-related audit activity.
+
+Related backend components include:
+
+- Audit API.
+- Audit service.
+- Audit-related data models.
+
+Audit visibility supports operational review and accountability.
+
+### 4.12 Reports
+
+SentinelX includes a reporting interface and report service.
+
+These components provide the foundation for organizing and accessing security-related reports.
+
+### 4.13 System and Configuration Management
+
+The backend includes configuration, security, middleware, permissions, and system-related components.
+
+These support the application's internal configuration and API operation.
+
+---
+
+## 5. System Architecture
+
+SentinelX follows a modular frontend/backend architecture.
+
+```text
+                   SENTINELX V1
+                         |
+             +-----------+-----------+
+             |                       |
+          FRONTEND                 BACKEND
+             |                       |
+       React + TypeScript        Python API
+             |                       |
+       SOC Dashboard             API Layer
+             |                       |
+             |              +--------+--------+
+             |              |        |        |
+             |            Events  Detection   AI
+             |              |        |        |
+             |              +--------+--------+
+             |                       |
+             |                Processing Layer
+             |                       |
+             |                Storage Layer
+             |                       |
+             +---------- REST API ---+
+                         |
+                Security Operations
+                         |
+          Events / Alerts / Incidents
+              Assets / Audit / Reports
+```
+
+### Backend Architecture
+
+The backend is separated into functional modules:
+
+| Directory | Responsibility |
+|---|---|
+| `api/` | API routing and request handling |
+| `core/` | Configuration, security, middleware and permissions |
+| `db/` | Database connectivity and base configuration |
+| `domain/` | Detection, normalization, correlation and analysis logic |
+| `infra/` | Storage and infrastructure adapters |
+| `models/` | Database models |
+| `schemas/` | API data schemas and validation |
+| `services/` | Application business logic |
+| `workers/` | Background processing components |
+| `tests/` | Backend tests |
+
+### Frontend Architecture
+
+The frontend follows a component-based architecture using React and TypeScript.
+
+Its main areas include:
+
+- Application entry point.
+- Authentication context.
+- Shared UI components.
+- Centralized API services.
+- Dashboard pages.
+- Security monitoring interfaces.
+- Investigation and management interfaces.
+
+---
+
+## 6. Technology Stack
+
+| Technology | Purpose |
+|---|---|
+| Python | Backend development |
+| React | Frontend framework |
+| TypeScript | Frontend programming language |
+| Vite | Frontend development and build tooling |
+| REST API | Frontend/backend communication |
+| SQLite | Local database storage implementation |
+| SQLAlchemy | Database model and ORM layer |
+| Alembic | Database migrations |
+| YAML | Detection rule definitions |
+| Pytest | Backend testing |
+| Git | Version control |
+| GitHub | Source code management |
+| Render | Cloud deployment |
+
+### Additional Infrastructure Components
+
+The repository also contains infrastructure adapters for:
+
+- Redis queue integration.
+- OpenSearch storage integration.
+- SQLite storage.
+
+Their presence in the source code does not mean all services are enabled in the default deployment.
+
+---
+
+## 7. Project Directory Structure
+
+```text
+SentinelX-V1/
+│
+├── backend/
+│   ├── alembic/
+│   │   └── versions/
+│   │
+│   ├── app/
+│   │   ├── api/
+│   │   │   └── v1/
+│   │   │       ├── ai.py
+│   │   │       ├── alerts.py
+│   │   │       ├── assets.py
+│   │   │       ├── audit.py
+│   │   │       ├── auth.py
+│   │   │       ├── dashboard.py
+│   │   │       ├── events.py
+│   │   │       ├── incidents.py
+│   │   │       ├── ingest.py
+│   │   │       ├── mitre.py
+│   │   │       ├── reports.py
+│   │   │       ├── response.py
+│   │   │       ├── rules.py
+│   │   │       ├── system.py
+│   │   │       └── users.py
+│   │   │
+│   │   ├── core/
+│   │   ├── db/
+│   │   ├── domain/
+│   │   ├── infra/
+│   │   ├── models/
+│   │   ├── schemas/
+│   │   ├── services/
+│   │   ├── workers/
+│   │   ├── main.py
+│   │   └── samples.py
+│   │
+│   ├── tests/
+│   ├── requirements.txt
+│   ├── requirements-dev.txt
+│   └── alembic.ini
+│
+├── detection-rules/
+│   ├── authentication/
+│   ├── correlation/
+│   ├── network/
+│   ├── persistence/
+│   └── process/
+│
+├── docs/
+│   ├── ARCHITECTURE.md
+│   └── INGESTION.md
+│
+├── frontend/
+│   ├── src/
+│   │   ├── auth/
+│   │   ├── components/
+│   │   ├── pages/
+│   │   ├── services/
+│   │   ├── App.tsx
+│   │   └── main.tsx
+│   ├── package.json
+│   ├── package-lock.json
+│   └── vite.config.ts
+│
+├── infrastructure/
+│   └── nginx/
+│       └── nginx.conf
+│
+├── sample-data/
+├── scripts/
+│
+├── Dockerfile
+├── docker-compose.yml
+├── render.yaml
+├── run.bat
+├── run.sh
+├── start.bat
+├── start.sh
+├── .dockerignore
+├── .env.example
+├── .env.lite.example
+├── .gitignore
+├── README.md
+├── SETUP.md
+├── START-HERE.txt
+└── TROUBLESHOOTING.md
+```
+
+---
+
+## 8. Installation and Local Development
+
+### Prerequisites
+
+Install the following software:
+
+| Software | Version / Requirement |
+|---|---|
+| Python | 3.13.7 used during development |
+| Node.js | 24.19.0 used during development |
+| npm | Compatible with installed Node.js |
+| Git | Required for repository management |
+| Windows | Supported development environment |
+
+Other operating systems may require adapting the startup commands.
+
+### Step 1: Clone the Repository
+
+```bash
+git clone https://github.com/saudnadaf09/SentinelX-V1.git
+```
+
+Move into the project directory:
+
+```bash
+cd SentinelX-V1
+```
+
+### Step 2: Configure Environment Variables
+
+Create a local environment file using the supplied template:
+
+```cmd
+copy .env.example .env
+```
+
+Review the environment configuration and fill in the required values.
+
+If the backend uses a separate environment file, follow `SETUP.md` and the backend configuration instructions.
+
+Never commit real credentials or production secrets.
+
+### Step 3: Start SentinelX on Windows
+
+The repository includes Windows startup scripts.
+
+From the project root:
+
+```cmd
+run.bat
+```
+
+Follow the instructions displayed by the startup script.
+
+For the alternative startup workflow, inspect:
+
+```cmd
+start.bat
+```
+
+### Step 4: Manual Setup
+
+If you prefer manual installation, use the setup documentation and the dependency files:
+
+```text
+backend/requirements.txt
+backend/requirements-dev.txt
+frontend/package.json
+```
+
+Refer to `SETUP.md` for the project's actual installation and startup requirements.
+
+### Troubleshooting
+
+If the application fails to start, check:
+
+- Python installation and PATH.
+- Node.js and npm installation.
+- Backend dependency installation.
+- Frontend dependency installation.
+- Environment variables.
+- Database initialization.
+- Port conflicts.
+- Backend and frontend startup logs.
+
+Additional guidance is available in:
+
+- `START-HERE.txt`
+- `SETUP.md`
+- `TROUBLESHOOTING.md`
+
+---
+
+## 9. Detection Rules
+
+SentinelX uses YAML-based rule definitions organized by security category.
+
+Example directory:
+
+```text
+detection-rules/
+│
+├── authentication/
+│   ├── new-account.yml
+│   ├── privileged-group.yml
+│   ├── ssh-bruteforce.yml
+│   ├── success-after-failures.yml
+│   └── windows-bruteforce.yml
+│
+├── correlation/
+│   └── correlation.yml
+│
+├── network/
+│   ├── port-scan.yml
+│   └── suspicious-outbound.yml
+│
+├── persistence/
+│   └── scheduled-task-service.yml
+│
+└── process/
+    ├── defense-evasion.yml
+    ├── script-interpreter.yml
+    ├── suspicious-powershell.yml
+    └── temp-path-execution.yml
+```
+
+These rules provide a structured foundation for identifying security-related patterns in supported event data.
+
+---
+
+## 10. API Architecture
+
+The backend provides versioned API modules under:
+
+```text
+/api/v1/
+```
+
+The repository includes the following API modules:
+
+| API Module | Purpose |
+|---|---|
+| `auth` | Authentication |
+| `users` | User-related operations |
+| `dashboard` | Dashboard information |
+| `events` | Security event operations |
+| `ingest` | Event ingestion |
+| `alerts` | Alert operations |
+| `incidents` | Incident operations |
+| `assets` | Asset operations |
+| `rules` | Detection rule operations |
+| `ai` | AI investigation |
+| `mitre` | MITRE-related operations |
+| `response` | Response operations |
+| `audit` | Audit records |
+| `reports` | Reporting |
+| `system` | System-related operations |
+
+For API behavior, request schemas, authentication requirements, and available endpoints, refer to the backend source code and API configuration.
+
+---
+
+## 11. Database and Data Storage
+
+The repository includes:
+
+- SQLAlchemy database components.
+- Database models.
+- SQLite storage implementation.
+- Alembic migration configuration.
+- Database session management.
+
+SQLite is suitable for local development and evaluation.
+
+**Deployment consideration:** The current Render Free deployment uses ephemeral storage. Local database files should not be treated as permanent production storage.
+
+For a persistent production deployment, a managed PostgreSQL database and a tested database migration strategy should be implemented.
+
+---
+
+## 12. Render Deployment
+
+SentinelX V1 is deployed using Render.
+
+**Live URL:**
+
+<https://sentinelx-2ej8.onrender.com/>
+
+### Deployment Configuration
+
+The repository contains a `render.yaml` Blueprint configuration.
+
+Current configuration:
+
+- Service type: Web Service.
+- Runtime: Docker.
+- Plan: Free.
+- Health check path: `/api/v1/health`.
+- Secret key: Generated by Render.
+- Bootstrap administrator email: Configured through environment variables.
+- Bootstrap administrator password: Entered privately in the Render dashboard.
+- Demo data: Controlled through `LOAD_DEMO_DATA`.
+
+### Environment Variables
+
+Configure the following values in the Render dashboard:
+
+| Variable | Description |
+|---|---|
+| `SECRET_KEY` | Application secret |
+| `BOOTSTRAP_ADMIN_EMAIL` | Bootstrap administrator email |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Bootstrap administrator password |
+| `LOAD_DEMO_DATA` | Controls demo data loading |
+
+Do not expose secret values in source code, screenshots, logs, or public documentation.
+
+### Important Render Limitations
+
+The current Free deployment has important limitations:
+
+1. Free services can spin down after inactivity.
+2. Free instances do not support persistent disks.
+3. Files stored on the instance may be lost after restart or redeployment.
+4. SQLite files on ephemeral storage are not suitable for permanent production records.
+5. Background monitoring cannot be assumed to operate continuously when the service is sleeping.
+
+For production use, configure persistent storage, database backups, secure telemetry ingestion, monitoring, and suitable always-on infrastructure.
+
+---
+
+## 13. Security Considerations
+
+Security is an essential part of any SIEM platform.
+
+When deploying or extending SentinelX, follow these practices:
+
+- Keep API keys and passwords outside the repository.
+- Use strong, unique administrator credentials.
+- Generate a secure application secret.
+- Restrict access to administrative interfaces.
+- Use HTTPS for production deployments.
+- Validate incoming API data.
+- Apply appropriate authentication and authorization.
+- Protect database credentials.
+- Avoid exposing sensitive event data.
+- Review logs before sharing them.
+- Use authorized data sources and monitoring environments.
+- Verify response actions before reporting them as successful.
+
+Never use SentinelX to monitor systems or networks without proper authorization.
+
+---
+
+## 14. Testing
+
+The backend includes a Pytest test suite.
+
+Test files are located in:
+
+```text
+backend/tests/
+```
+
+The repository includes tests covering areas such as:
+
+- API flows.
+- Domain logic.
+- Event normalization.
+- Detection rules.
+- Other domain functionality.
+
+Install development dependencies according to the project setup instructions and execute tests from the appropriate backend environment.
+
+Example:
+
+```bash
+pytest
+```
+
+Test results should be evaluated in the target environment before relying on the platform for operational security monitoring.
+
+---
+
+## 15. Current Scope and Limitations
+
+SentinelX V1 is an evolving security monitoring project.
+
+The following distinctions are important:
+
+| Area | Current Scope / Consideration |
+|---|---|
+| SOC Dashboard | Included |
+| Event Management | Included |
+| Event Ingestion Components | Included |
+| Rule-Based Detection | Included |
+| Alert Management | Included |
+| Incident Management | Included |
+| Asset Management | Included |
+| AI Investigator Interface | Included; provider configuration required |
+| MITRE Components | Included |
+| Response Center | Included; real execution depends on integration |
+| Audit Logs | Included |
+| Reporting | Included |
+| Endpoint Fleet Monitoring | Requires suitable endpoint telemetry integration |
+| Network Packet Capture | Requires a supported network sensor or capture integration |
+| Persistent Cloud Storage | Requires persistent database infrastructure |
+| Enterprise Multi-Tenancy | Not claimed as production-ready |
+| Continuous Production Monitoring | Requires always-on infrastructure and operational validation |
+
+The presence of a dashboard module or API does not by itself establish that a corresponding external integration is operational.
+
+Likewise, sample data, simulated activity, and actual telemetry must be clearly distinguished.
+
+---
+
+## 16. Future Development Roadmap
+
+The following are potential future development directions, not claims about completed V1 functionality.
+
+- Persistent PostgreSQL-backed production storage.
+- Secure Windows and Linux endpoint telemetry agents.
+- Centralized multi-endpoint monitoring.
+- Network sensor and firewall log integrations.
+- Improved event normalization and correlation.
+- Advanced detection engineering.
+- Multi-organization architecture and tenant isolation.
+- Role-based access control enhancements.
+- Background processing and job management.
+- Improved AI investigation and evidence references.
+- Production-grade monitoring and observability.
+- Secure response integrations.
+- Data retention and backup management.
+- Expanded automated testing and deployment workflows.
+
+---
+
+## 17. Contributing
+
+Contributions, suggestions, and technical feedback are welcome.
+
+If you would like to contribute:
+
+1. Fork the repository.
+2. Create a separate feature branch.
+3. Make your changes.
+4. Test the relevant functionality.
+5. Submit a pull request with a clear description.
+
+For significant architectural changes, discuss the proposal before implementation.
+
+---
+
+## 18. Responsible Use
+
+SentinelX is intended for defensive cybersecurity, security monitoring, and authorized security operations.
+
+Users are responsible for ensuring they have appropriate permission to collect, process, and analyze the security data handled by the platform.
+
+Do not use the platform for unauthorized access, surveillance, or monitoring of systems outside your approved scope.
+
+---
+
+## 19. Project Links
+
+| Resource | Link |
+|---|---|
+| Live Application | [SentinelX V1](https://sentinelx-2ej8.onrender.com/) |
+| GitHub Repository | [SentinelX-V1](https://github.com/saudnadaf09/SentinelX-V1) |
+| Architecture Documentation | [ARCHITECTURE.md](docs/ARCHITECTURE.md) |
+| Ingestion Documentation | [INGESTION.md](docs/INGESTION.md) |
+| Setup Guide | [SETUP.md](SETUP.md) |
+| Troubleshooting | [TROUBLESHOOTING.md](TROUBLESHOOTING.md) |
+
+---
+
+## 20. License
+
+Please refer to the repository's [LICENSE](LICENSE) file for the applicable license and usage terms.
+
+---
+
+<p align="center">
+
+  **SENTINELX V1**
+
+  *Centralized Visibility. Structured Detection. Better Security Operations.*
+
+  Built as a cybersecurity engineering project.
+
+</p>
