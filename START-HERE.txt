@@ -1,0 +1,36 @@
+SENTINELX - SABSE ASAAN TARIKA (Docker ki zaroorat nahi)
+=========================================================
+
+Aapko sirf 2 free programs install karne hain (ek baar):
+
+ 1) Python  -> https://www.python.org/downloads/
+    Installer kholte hi NEECHE "Add python.exe to PATH" wale box par TICK zaroor lagayein, phir Install.
+
+ 2) Node.js -> https://nodejs.org/   (jo "LTS" likha ho wo download karein, Next-Next karke install)
+
+Install ke baad:
+
+ A) ZIP ko extract karein. Folder "sentinelx" banega.
+ B) Us folder ke andar "run.bat" par DOUBLE-CLICK karein.
+    (Linux/Mac: terminal mein ./run.sh)
+ C) Ek kaali window khulegi aur kaam karegi. Pehli baar 5-10 minute lagte hain
+    (internet se packages download + website build). Window band mat karna.
+ D) Kaam hone par browser apne aap khulega: http://localhost:8000
+ E) Login ke liye folder mein DEMO-LOGINS.txt file khol lein. Usme admin ka email aur password likha hai.
+
+Pehli baar me demo attack data apne aap load ho jata hai, to Alerts, Incidents,
+Events, Dashboard sab bhara hua dikhega.
+
+Dobara chalana ho to bas phir se run.bat par double-click. Ab 5-10 second me start ho jayega.
+Band karna ho to kaali window mein Ctrl+C dabayein ya window close kar dein.
+
+Sab kuch reset (naye sire se) karna ho to ye 2 cheezein delete karein:
+   backend\data   (folder)     aur     backend\.env   (file)     aur    DEMO-LOGINS.txt
+Phir run.bat dobara chalayein.
+
+VS Code se kholna ho: File > Open Folder > sentinelx. Terminal (Ctrl+`) mein  .\run.bat  likhein.
+
+Koi error aaye to kaali window ka poora red text copy karke bhej dein.
+
+Docker wala bada version bhi folder me hai (SETUP.md), uski zaroorat sirf tab hai jab
+aap OpenSearch/PostgreSQL ke saath production-jaisa chalana chahein.
